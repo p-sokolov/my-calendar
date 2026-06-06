@@ -21,31 +21,45 @@ func NewCalendar() *Calendar {
 }
 
 func (c *Calendar) GetDaily(creatorId string, date string) ([]Event, error) {	
+
+	// if creatorId in null and date is null then we should search all daily event based on time.Now
+	// if creatorId!=nil and date is null then we got map[creatorId] and thats it
+	// if creatorId is null and date!=nil then we should shrink all event by time.Now (today) and filter by target date
+	// if we know all params then do map[creatorId] and filter it by trget date
+	
 	var dailyEvents []Event
 
-	creatorId_, err := strconv.Atoi(creatorId)
-	if err != nil {        
-        return nil, err
-    }
-    
+	if creatorId != "" {
+		creatorId_, err := strconv.Atoi(creatorId)
+		if err != nil {        
+	        return nil, err
+	    }
+	}    
 	for _, e := range c.events {
 		if date == e.Date || creatorId == e.CreatorID {
 			dailyEvents = append(dailyEvents, e)
 		}
 	}
 
-	return dailyEvents
+	return dailyEvents, nil
 }
 
-func (c *Calendar) GetMonthly(creatorId int, month time.Month, year int) []Event {	
-	var weeklyEvents []Event
+func (c *Calendar) GetMonthly(creatorId string, date string) ([]Event, error) {
 	
-	for _, e := range c.events {
+	var weeklyEvents []Event
+	targetYear, targetMonth, _ := date.Date()
 
+   	if creatorId != "" {
+		creatorId_, err := strconv.Atoi(creatorId)
+		if err != nil {        
+	        return nil, err
+	    }
+	}   
+	for _, e := range c.events {
 		curDate, _ := time.Parse("2001-01-01", e.Date)
 		curYear, curMonth, _ := curDate.Date()
 		
-		if (curYear == year && curMonth == month) || creatorId == e.CreatorID {
+		if (curYear == targetYear && curMonth == targetMonth) || creatorId_ == e.CreatorID {
 			weeklyEvents = append(weeklyEvents, e)
 		}
 	}

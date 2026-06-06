@@ -37,21 +37,25 @@ func (h *Handler) GetDaily(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetMonthly(w http.ResponseWriter, r *http.Request) {
 
 	date := r.URL.Query().Get("date")
+	userId := r.URL.Query().Get("user_id")
+	
 	targetDate, err := time.Parse("2001-01-01", date)
 	if err != nil {
 		writeJson(w, http.StatusBadRequest, "date must be in YYYY-MM-DD format")
         return
 	}
-	
-	targetYear, targetMonth, _ := targetDate.Date()
-	
-	userId, err := strconv.Atoi(r.URL.Query().Get("user_id"))
+
+    events, err := h.storage.GetMonthly(userId, date)
     if err != nil {
-        writeJson(w, http.StatusBadRequest, "user_id must be a number")
-        return
+    	writeJson(w, http.StatusBadRequest, err.Error())
     }
 
-    writeJson(w, http.StatusOK, h.storage.GetMonthly(userId, targetMonth, targetYear))
+    writeJson(w, http.StatusOK, events)
+}
+
+func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
+
+	
 }
 
 

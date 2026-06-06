@@ -23,6 +23,10 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/events_for_day", h.GetDaily).Methods("get")
+	r.HandleFunc("/events_for_month", h.GetMonthly).Methods("get")
+	r.HandleFunc("/create_event", h.CreateEvent).Methods("post")
+	r.HandleFunc("/update_event", h.UpdateEvent).Methods("post")
+	r.HandleFunc("/delete_event", h.DeleteEvent).Methods("post")	
 
 	// srv := &http.Server{
 	// 	Addr:    cfg.HttpPort,
