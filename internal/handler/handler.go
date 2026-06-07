@@ -3,8 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
-	"time"
 
 	"my-calendar/internal/calendar"
 )
@@ -34,17 +32,24 @@ func (h *Handler) GetDaily(w http.ResponseWriter, r *http.Request) {
 	writeJson(w, http.StatusOK, events)
 }
 
+func (h *Handler) GetWeekly(w http.ResponseWriter, r *http.Request) {
+
+	date := r.URL.Query().Get("date")
+	userId := r.URL.Query().Get("user_id")
+
+    events, err := h.storage.GetWeekly(userId, date)
+    if err != nil {
+    	writeJson(w, http.StatusBadRequest, err.Error())
+    }
+    
+	writeJson(w, http.StatusOK, events)
+}
+
 func (h *Handler) GetMonthly(w http.ResponseWriter, r *http.Request) {
 
 	date := r.URL.Query().Get("date")
 	userId := r.URL.Query().Get("user_id")
 	
-	targetDate, err := time.Parse("2001-01-01", date)
-	if err != nil {
-		writeJson(w, http.StatusBadRequest, "date must be in YYYY-MM-DD format")
-        return
-	}
-
     events, err := h.storage.GetMonthly(userId, date)
     if err != nil {
     	writeJson(w, http.StatusBadRequest, err.Error())
@@ -55,7 +60,16 @@ func (h *Handler) GetMonthly(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 
-	
+	var event calendar.Event
+
+	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+        writeJson(w, http.StatusBadRequest, "invalid request body")
+        return
+    }
+
+    if err := h.storage.CreateEvent(event); err != nil {
+    	writeJson(w, http.StatusBadRequest, err.Error())
+    }
 }
 
 
