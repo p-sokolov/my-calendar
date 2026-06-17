@@ -3,47 +3,121 @@ package main
 import (
 	"net/http"
 	"sync"
-	"log"
+	"os"
+	"time"
+	"os/signal"
+	"context"
+	"syscall"
 
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
+	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	
 	"my-calendar/internal/config"
 	"my-calendar/internal/calendar"
 	"my-calendar/internal/handler"
+	"my-calendar/internal/logger"
+	"my-calendar/internal/middleware"
+	_ "my-calendar/internal/handler/docs"
+	"my-calendar/internal/metrics"
+	"my-calendar/internal/clickhouse"
 )
 
+// @title Calendar API
+// @version 1.0
+// @description REST API для календаря
+// @host localhost:8080
+// @BasePath /
 func main() {
+
+	// first initialization of logger
+	logger.Logger()
+	defer logger.L().Sync()
+
+	if err := clickhouse.ConnectWithRetry(); err != nil {
+	    logger.L().Warn(
+	        "clickhouse unavailable",
+	        zap.Error(err),
+	    )
+	}
 
 	// load config
 	cfg := config.LoadCfg()
 
+	// var for event storage
 	var calendar = calendar.NewCalendar()
 
-	h := handler.NewHandler(*calendar)
+	// var for handler
+	h := handler.NewHandler(calendar)
 
+	// create router
 	r := mux.NewRouter()
-	r.HandleFunc("/events_for_day", h.GetDaily).Methods("get")
-	r.HandleFunc("/events_for_week", h.GetWeekly).Methods("get")
-	r.HandleFunc("/events_for_month", h.GetMonthly).Methods("get")
-	r.HandleFunc("/create_event", h.CreateEvent).Methods("post")
-	// r.HandleFunc("/update_event", h.UpdateEvent).Methods("post")
-	// r.HandleFunc("/delete_event", h.DeleteEvent).Methods("post")	
+	r.Use(middleware.RequestLogger)
+	r.HandleFunc("/events", h.GetEvents).Methods("get")
+	r.HandleFunc("/events", h.CreateEvent).Methods("post")
+	r.HandleFunc("/events/{id}", h.UpdateEvent).Methods("put")
+	r.HandleFunc("/events/{id}", h.DeleteEvent).Methods("delete")
 
-	// srv := &http.Server{
-	// 	Addr:    cfg.HttpPort,
-	// 	Handler: r,
-	// }
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	r.Handle("/metrics", promhttp.Handler())
 
+	// HTTP Server setup
+	srv := &http.Server{
+		Addr:    cfg.HttpPort,
+		Handler: r,
+	}
+
+	logger.L().Info("starting server",
+		zap.String("host", "localhost"),
+		zap.String("port", cfg.HttpPort),
+	)
+
+	metrics.Init()
+	
+	// create waitgroup
 	wg := &sync.WaitGroup{}
 
+	// run http server
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Printf("server started")
-		if err := http.ListenAndServe(cfg.HttpPort, r); err != nil && err != http.ErrServerClosed {
-			log.Fatal("http.ListenAndServe failed")
+		logger.L().Info("http server starting", zap.String("addr", "localhost"+srv.Addr))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.L().Fatal("http server failed", zap.Error(err))
 		}
 	}()
 
-	wg.Wait()	
+	// signal channel
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	// wait for signal
+	sig := <-sigCh
+	logger.L().Info("shutdown signal received", zap.String("signal", sig.String()))
+
+	// graceful HTTP shutdown
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer shutdownCancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.L().Error("http server shutdown error", zap.Error(err))
+	} else {
+		logger.L().Info("http server stopped gracefully")
+	}
+
+	// wait for goroutines to finish
+	doneCh := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(doneCh)
+	}()
+
+	select {
+	case <-doneCh:
+		logger.L().Info("all goroutines finished")
+	case <-time.After(20 * time.Second):
+		logger.L().Warn("timeout waiting for goroutines, forcing exit")
+	}
+
+	logger.L().Info("service stopped")	
 }

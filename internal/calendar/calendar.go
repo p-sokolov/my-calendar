@@ -1,29 +1,53 @@
 package calendar
 
 import (
-	"fmt"
 	"strconv"
 	"time"
+	"sync"
+	
+	e "my-calendar/internal/error"
 )
 
 type Event struct {
-	// EventID 	int		`json:"-"`
+	EventID 	int		`json:"id"`
 	CreatorID 	int		`json:"user_id"`
 	Date 		string 	`json:"date"`
 	Description string 	`json:"event"`
 }
 
 type Calendar struct {
+	mu 	   sync.RWMutex
 	events map[int][]Event
+	nextID int
 }
 
 const dateFormat = "2006-01-02"
 
 func NewCalendar() *Calendar {
-	return &Calendar{ events: make(map[int][]Event)}
+	return &Calendar { 
+		events: make(map[int][]Event),
+		nextID: 1,
+	}
+}
+
+func (c *Calendar) GetEvents(creatorIdstr string, date string, period string) ([]Event, error) {
+	switch period {	
+	case "":
+		return c.GetAllPeriods(creatorIdstr, date)
+    case "day":
+    	return c.GetDaily(creatorIdstr, date)
+    case "week":
+    	return c.GetWeekly(creatorIdstr, date)
+    case "month":
+    	return c.GetMonthly(creatorIdstr, date)
+    default:
+    	return nil, e.ErrUnknownPeriod
+	}
 }
 
 func (c *Calendar) GetDaily(creatorIdstr string, date string) ([]Event, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	// if creatorId in null and date is null then we should search all daily event based on time.Now
 	// if creatorId!=nil and date is null then we got map[creatorId] and thats it
@@ -40,7 +64,7 @@ func (c *Calendar) GetDaily(creatorIdstr string, date string) ([]Event, error) {
 	if hasCreatorId {
 		creatorId, err = strconv.Atoi(creatorIdstr)
 		if err != nil {        
-	        return nil, fmt.Errorf("user_id must be number")
+	        return nil, e.ErrUserIdTypeMismatch
 	    }
 	}	
 
@@ -82,6 +106,9 @@ func (c *Calendar) GetDaily(creatorIdstr string, date string) ([]Event, error) {
 }
 
 func (c *Calendar) GetWeekly(creatorIdstr string, date string) ([]Event, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
 	var weeklyEvents []Event
 	
 	hasCreatorId := creatorIdstr != ""
@@ -93,7 +120,7 @@ func (c *Calendar) GetWeekly(creatorIdstr string, date string) ([]Event, error) 
 	if hasCreatorId {
 		creatorId, err = strconv.Atoi(creatorIdstr)
 		if err != nil {        
-	        return nil, fmt.Errorf("user_id must be number")
+	        return nil, e.ErrUserIdTypeMismatch
 	    }
 	}
 
@@ -101,7 +128,7 @@ func (c *Calendar) GetWeekly(creatorIdstr string, date string) ([]Event, error) 
 	if hasDate {
 		targetDate, err = time.Parse(dateFormat, date)
 		if err != nil {
-        	return nil, fmt.Errorf("date must be in YYYY-MM-DD format")
+        	return nil, e.ErrInvalidDateFormat
 		}
 	}
 
@@ -145,6 +172,9 @@ func (c *Calendar) GetWeekly(creatorIdstr string, date string) ([]Event, error) 
 }
 
 func (c *Calendar) GetMonthly(creatorIdstr string, date string) ([]Event, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
 	var monthlyEvents []Event
 
 	hasCreatorId := creatorIdstr != ""
@@ -156,7 +186,7 @@ func (c *Calendar) GetMonthly(creatorIdstr string, date string) ([]Event, error)
 	if hasCreatorId {
 		creatorId, err = strconv.Atoi(creatorIdstr)
 		if err != nil {        
-	        return nil, fmt.Errorf("user_id must be number")
+	        return nil, e.ErrUserIdTypeMismatch
 	    }
 	}
 
@@ -164,7 +194,7 @@ func (c *Calendar) GetMonthly(creatorIdstr string, date string) ([]Event, error)
 	if hasDate {
 		targetDate, err = time.Parse(dateFormat, date)
 		if err != nil {
-        	return nil, fmt.Errorf("date must be in YYYY-MM-DD format")
+        	return nil, e.ErrInvalidDateFormat
 		}
 	}
 
@@ -196,15 +226,110 @@ func (c *Calendar) GetMonthly(creatorIdstr string, date string) ([]Event, error)
 	return monthlyEvents, nil
 }
 
-func (c *Calendar) CreateEvent(event Event) error {	
+func (c *Calendar) GetAllPeriods(creatorIdstr string, date string) ([]Event, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
+	var allEvents []Event
+	var creatorId int
+	var err error
+	
+	hasCreatorId := creatorIdstr != ""
+	hasDate := date != ""
+
+	if hasCreatorId {
+		creatorId, err = strconv.Atoi(creatorIdstr)
+		if err != nil {        
+	        return nil, e.ErrUserIdTypeMismatch
+	    }
+	}	
+	
+	switch {
+	case hasCreatorId && hasDate:
+		for _, e := range c.events[creatorId] {
+			if e.Date == date {
+				allEvents = append(allEvents, e)
+			}
+		}
+	case hasCreatorId:
+		candidates := c.events[creatorId]
+		for _, e := range candidates {
+			allEvents = append(allEvents, e)
+		}
+	case hasDate:
+		for _, event := range c.events {
+			for _, e := range event {
+				if e.Date == date {
+					allEvents = append(allEvents, e)
+				}
+			}
+		}
+	default:
+		for _, event := range c.events {
+			for _, e := range event {
+				allEvents = append(allEvents, e)
+			}
+		}
+	}
+	
+	return allEvents, nil
+}
+
+func (c *Calendar) CreateEvent(event Event) (Event, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
 	if event.CreatorID <= 0 {
-		return fmt.Errorf("invalid user_id]")
+		return Event{}, e.ErrInvalidUserId
     }
 
     if _, err := time.Parse(dateFormat, event.Date); err != nil {
-		return fmt.Errorf("invalid date")
+		return Event{}, e.ErrInvalidDate
     }
 
-    c.events[event.CreatorID] = append(c.events[event.CreatorID], event)  
-    return nil
+    event.EventID = c.nextID
+    c.nextID++
+        
+    c.events[event.CreatorID] = append(c.events[event.CreatorID], event)
+    return event, nil
+}
+
+func (c *Calendar) UpdateEvent(event Event) (Event, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	if _, err := time.Parse(dateFormat, event.Date); err != nil {
+		return Event{}, e.ErrInvalidDate
+    }
+
+    for userID, events := range c.events {
+        for i := range events {
+            if events[i].EventID == event.EventID {
+	           	old := c.events[userID][i]
+	            old.Date = event.Date
+	            old.Description = event.Description
+	            
+				c.events[userID][i] = old
+                return event, nil
+            }
+        }
+    }
+
+    return Event{}, e.ErrEventNotFound
+}
+
+func (c *Calendar) DeleteEvent(id int) (error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for userID, events := range c.events {
+        for i := range events {
+            if events[i].EventID == id {
+            	c.events[userID] = append(events[:i], events[i+1:]...)
+                return nil
+            }
+        }
+    }
+
+    return e.ErrEventNotFound
 }
