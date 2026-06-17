@@ -43,8 +43,8 @@ func RequestLogger(next http.Handler) http.Handler {
 					Timestamp:  time.Now(),
 					Method:     r.Method,
 					Path:       r.URL.Path,
-					Status:     uint16(rw.statusCode),
-					DurationMs: uint32(time.Since(start).Milliseconds()),
+					Status:     int(rw.statusCode),
+					DurationMs: int(time.Since(start).Milliseconds()),
 				},
 			)
 			if err != nil {

@@ -66,8 +66,9 @@ func main() {
 
 	// HTTP Server setup
 	srv := &http.Server{
-		Addr:    cfg.HttpPort,
-		Handler: r,
+		Addr:              cfg.HttpPort,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	logger.L().Info("starting server",
