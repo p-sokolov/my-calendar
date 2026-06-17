@@ -4,7 +4,9 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	_"go.uber.org/zap"
+	"go.uber.org/zap"
+
+	"my-calendar/internal/logger"
 )
 
 type Config struct {
@@ -14,10 +16,10 @@ type Config struct {
 func LoadCfg() *Config {
 	err := godotenv.Load()
 	if err != nil {
-		// logger.fatal
+		logger.L().Fatal("config load failed", zap.Error(err))
 	}
 
 	httpPort := os.Getenv("HTTP_PORT")
 
-	return &Config{ HttpPort: httpPort }
+	return &Config{HttpPort: httpPort}
 }

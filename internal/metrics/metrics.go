@@ -11,25 +11,25 @@ var RequestsTotal = prometheus.NewCounterVec(
 )
 
 var RequestDuration = prometheus.NewHistogramVec(
-    prometheus.HistogramOpts{
-        Name:    "http_request_duration_seconds",
-        Help:    "HTTP request duration",
-        Buckets: []float64{
-            0.001,
-            0.005,
-            0.01,
-            0.05,
-            0.1,
-            0.5,
-            1,
-            2,
-            5,
-        },
-    },
-    []string{"method", "path"},
+	prometheus.HistogramOpts{
+		Name: "http_request_duration_seconds",
+		Help: "HTTP request duration",
+		Buckets: []float64{
+			0.001,
+			0.005,
+			0.01,
+			0.05,
+			0.1,
+			0.5,
+			1,
+			2,
+			5,
+		},
+	},
+	[]string{"method", "path"},
 )
 
 func Init() {
-    prometheus.MustRegister(RequestsTotal)
-    prometheus.MustRegister(RequestDuration)
+	prometheus.MustRegister(RequestsTotal)
+	prometheus.MustRegister(RequestDuration)
 }

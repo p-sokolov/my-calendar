@@ -1,27 +1,27 @@
 package main
 
 import (
-	"net/http"
-	"sync"
-	"os"
-	"time"
-	"os/signal"
 	"context"
+	"net/http"
+	"os"
+	"os/signal"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/gorilla/mux"
-	"go.uber.org/zap"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	
-	"my-calendar/internal/config"
+	httpSwagger "github.com/swaggo/http-swagger"
+	"go.uber.org/zap"
+
 	"my-calendar/internal/calendar"
-	"my-calendar/internal/handler"
-	"my-calendar/internal/logger"
-	"my-calendar/internal/middleware"
-	_ "my-calendar/internal/handler/docs"
-	"my-calendar/internal/metrics"
 	"my-calendar/internal/clickhouse"
+	"my-calendar/internal/config"
+	"my-calendar/internal/handler"
+	_ "my-calendar/internal/handler/docs"
+	"my-calendar/internal/logger"
+	"my-calendar/internal/metrics"
+	"my-calendar/internal/middleware"
 )
 
 // @title Calendar API
@@ -33,13 +33,15 @@ func main() {
 
 	// first initialization of logger
 	logger.Logger()
-	defer logger.L().Sync()
+	defer func() {
+		_ = logger.L().Sync()
+	}()
 
 	if err := clickhouse.ConnectWithRetry(); err != nil {
-	    logger.L().Warn(
-	        "clickhouse unavailable",
-	        zap.Error(err),
-	    )
+		logger.L().Warn(
+			"clickhouse unavailable",
+			zap.Error(err),
+		)
 	}
 
 	// load config
@@ -74,7 +76,7 @@ func main() {
 	)
 
 	metrics.Init()
-	
+
 	// create waitgroup
 	wg := &sync.WaitGroup{}
 
@@ -119,5 +121,5 @@ func main() {
 		logger.L().Warn("timeout waiting for goroutines, forcing exit")
 	}
 
-	logger.L().Info("service stopped")	
+	logger.L().Info("service stopped")
 }

@@ -21,7 +21,7 @@ type ErrorResponse struct {
 }
 
 func NewHandler(calendar *calendar.Calendar) *Handler {
-	return &Handler {
+	return &Handler{
 		storage: calendar,
 	}
 }
@@ -39,16 +39,16 @@ func NewHandler(calendar *calendar.Calendar) *Handler {
 // @Router /events [get]
 func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user_id")
-    date := r.URL.Query().Get("date")
-    period := r.URL.Query().Get("period")
+	date := r.URL.Query().Get("date")
+	period := r.URL.Query().Get("period")
 
-    events, err := h.storage.GetEvents(userID, date, period)
-    if errors.Is(err, e.ErrEventNotFound) {
-   		writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-        return
-    }
+	events, err := h.storage.GetEvents(userID, date, period)
+	if errors.Is(err, e.ErrEventNotFound) {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
 
-    writeJson(w, http.StatusOK, events)
+	writeJson(w, http.StatusOK, events)
 }
 
 func (h *Handler) GetDaily(w http.ResponseWriter, r *http.Request) {
@@ -57,12 +57,12 @@ func (h *Handler) GetDaily(w http.ResponseWriter, r *http.Request) {
 	date := r.URL.Query().Get("date")
 	userId := r.URL.Query().Get("user_id")
 
-    events, err := h.storage.GetDaily(userId, date)
-    if err != nil {
-    	writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-     	return
-    }
-    
+	events, err := h.storage.GetDaily(userId, date)
+	if err != nil {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
 	writeJson(w, http.StatusOK, events)
 }
 
@@ -70,26 +70,26 @@ func (h *Handler) GetWeekly(w http.ResponseWriter, r *http.Request) {
 	date := r.URL.Query().Get("date")
 	userId := r.URL.Query().Get("user_id")
 
-    events, err := h.storage.GetWeekly(userId, date)
-    if err != nil {
-   		writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-     	return
-    }
-    
+	events, err := h.storage.GetWeekly(userId, date)
+	if err != nil {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
 	writeJson(w, http.StatusOK, events)
 }
 
 func (h *Handler) GetMonthly(w http.ResponseWriter, r *http.Request) {
 	date := r.URL.Query().Get("date")
 	userId := r.URL.Query().Get("user_id")
-	
-    events, err := h.storage.GetMonthly(userId, date)
-    if err != nil {
-   		writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-    	return
-    }
 
-    writeJson(w, http.StatusOK, events)
+	events, err := h.storage.GetMonthly(userId, date)
+	if err != nil {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	writeJson(w, http.StatusOK, events)
 }
 
 // CreateEvent godoc
@@ -107,17 +107,17 @@ func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 	var event calendar.Event
 
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-        writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-        return
-    }
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
 
-    created, err := h.storage.CreateEvent(event)
-    if err != nil {
-   		writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-     	return
-    }
+	created, err := h.storage.CreateEvent(event)
+	if err != nil {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
 
-    writeJson(w, http.StatusOK, created)
+	writeJson(w, http.StatusOK, created)
 }
 
 // UpdateEvent godoc
@@ -133,29 +133,29 @@ func (h *Handler) CreateEvent(w http.ResponseWriter, r *http.Request) {
 // @Router /events/{id} [put]
 func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 	idStr := mux.Vars(r)["id"]
-	
+
 	id, err := strconv.Atoi(idStr)
-    if err != nil {
-        writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-        return
-    }
-    
-    var event calendar.Event
+	if err != nil {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	var event calendar.Event
 
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-        writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-        return
-    }
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
 
-    event.EventID = id
-    updated, err := h.storage.UpdateEvent(event)
-    
-    if err != nil {
-    	writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-     	return
-    }
+	event.EventID = id
+	updated, err := h.storage.UpdateEvent(event)
 
-    writeJson(w, http.StatusOK, updated)
+	if err != nil {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	writeJson(w, http.StatusOK, updated)
 }
 
 // DeleteEvent godoc
@@ -168,27 +168,28 @@ func (h *Handler) UpdateEvent(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} handler.ErrorResponse
 // @Router /events/{id} [delete]
 func (h *Handler) DeleteEvent(w http.ResponseWriter, r *http.Request) {
-	
+
 	idStr := mux.Vars(r)["id"]
-	
+
 	id, err := strconv.Atoi(idStr)
-    if err != nil {
-        writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-        return
-    }
+	if err != nil {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
 
-    if err := h.storage.DeleteEvent(id); err != nil {
-    	writeJson(w, http.StatusBadRequest, ErrorResponse{ Error: err.Error() })
-     	return
-    }
+	if err := h.storage.DeleteEvent(id); err != nil {
+		writeJson(w, http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+		return
+	}
 
-    w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // helper for writing json
 func writeJson(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		return
+	}
 }
-

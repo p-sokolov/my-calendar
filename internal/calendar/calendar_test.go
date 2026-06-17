@@ -6,8 +6,8 @@ func TestCreateEvent(t *testing.T) {
 	c := NewCalendar()
 
 	event := Event{
-		CreatorID:  1,
-		Date:       "2026-06-08",
+		CreatorID:   1,
+		Date:        "2026-06-08",
 		Description: "Daily standup",
 	}
 
