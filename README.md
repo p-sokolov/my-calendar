@@ -1,98 +1,154 @@
-# Calendar API
+
 ![CI](https://github.com/p-sokolov/my-calendar/actions/workflows/ci.yml/badge.svg)
 
-REST API service for calendar event management written in Go.
+# Calendar API
 
-## Features
+A REST API service for managing calendar events.
 
-- CRUD operations for calendar events
-- OpenAPI/Swagger documentation
-- Prometheus metrics collection
-- Grafana monitoring dashboards
-- ClickHouse request analytics
-- Structured logging with Zap
-- Docker & Docker Compose support
-- Postman collection for API testing
-- GitHub Actions CI pipeline
-- Static code analysis with golangci-lint
+The service provides CRUD operations for events and demonstrates a production-style backend setup with monitoring, analytics, API documentation, testing, containerization and CI/CD automation.
 
-## Tech Stack
+---
+
+# Task Scope and Expectations
+
+The goal of the project is to implement a simple calendar service while applying commonly used backend engineering practices and tooling.
+
+The project focuses on:
+
+- REST API development in Go
+- API documentation with Swagger
+- Monitoring with Prometheus and Grafana
+- Request analytics with ClickHouse
+- Containerized deployment with Docker Compose
+- Automated testing and linting
+- CI pipeline using GitHub Actions
+
+---
+
+# Functional Requirements
+
+The service supports:
+
+- Create event
+- Read events
+- Update event
+- Delete event
+
+Available endpoints:
+
+| Method | Endpoint |
+|----------|----------|
+| GET | /events |
+| POST | /events |
+| PUT | /events/{id} |
+| DELETE | /events/{id} |
+
+Additional endpoints:
+
+| Endpoint | Purpose |
+|----------|----------|
+| /metrics | Prometheus metrics |
+| /swagger/index.html | Swagger UI |
+
+---
+
+# Technical Requirements
+
+### Backend
 
 - Go
 - Gorilla Mux
-- ClickHouse
+- Zap Logger
+
+### Documentation
+
+- Swagger / OpenAPI
+
+### Monitoring
+
 - Prometheus
 - Grafana
-- Docker
-- Swagger/OpenAPI
-- Postman
-- GitHub Actions
 
-## Architecture
+### Analytics
+
+- ClickHouse
+
+### Infrastructure
+
+- Docker
+- Docker Compose
+
+### Quality Assurance
+
+- Unit Tests
+- golangci-lint
+- GitHub Actions CI
+
+### API Testing
+
+- Postman Collection
+
+---
+
+# Architecture
 
 ```text
-Client
-   │
-   ▼
-Calendar API
-   │
-   ├── Prometheus ──► Grafana
-   │
-   └── ClickHouse ──► Grafana
+                     +----------------+
+                     |     Client     |
+                     +--------+-------+
+                              |
+                              v
+                    +------------------+
+                    |   Calendar API   |
+                    |       Go         |
+                    +---+----------+---+
+                        |          |
+            Metrics     |          | Request Logs
+                        |          |
+                        v          v
+               +---------------+  +---------------+
+               |  Prometheus   |  |  ClickHouse   |
+               +-------+-------+  +-------+-------+
+                       |                  |
+                       +--------+---------+
+                                |
+                                v
+                         +-------------+
+                         |   Grafana   |
+                         +-------------+
 ```
 
-## Run
+---
+
+# How to Run
+
+Start all services:
 
 ```bash
 docker compose up --build
 ```
 
-### Endpoints
+Available services:
 
-API:
+| Service | URL |
+|----------|----------|
+| API | http://localhost:8080 |
+| Swagger | http://localhost:8080/swagger/index.html |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
+| ClickHouse HTTP | http://localhost:8123 |
 
-```text
-http://localhost:8080
-```
+---
 
-Swagger:
+# Testing
 
-```text
-http://localhost:8080/swagger/index.html
-```
-
-Grafana:
-
-```text
-http://localhost:3000
-```
-
-Prometheus:
-
-```text
-http://localhost:9090
-```
-
-## Monitoring
-
-Prometheus metrics:
-
-- HTTP requests count
-- Request duration histogram
-- Endpoint-level metrics
-
-Grafana dashboards:
-
-- Requests per second
-- Response latency
-- Endpoint analytics
-- Status code distribution
-
-## Testing
+Run unit tests:
 
 ```bash
 go test ./...
 ```
+
+Run linter:
 
 ```bash
 golangci-lint run
@@ -104,9 +160,23 @@ Postman collection:
 postman/calendar-api.json
 ```
 
-## CI
+---
 
-GitHub Actions pipeline runs:
+# Solution Notes
 
-- unit tests
-- golangci-lint checks
+This project intentionally keeps business logic simple while focusing on backend engineering practices often used in production systems.
+
+Implemented additions include:
+
+- Prometheus metrics collection
+- Grafana dashboards
+- ClickHouse request analytics
+- Structured logging
+- Dockerized environment
+- Swagger documentation
+- Postman collection
+- GitHub Actions CI pipeline
+- Static code analysis with golangci-lint
+
+The project serves as a demonstration of building, monitoring, testing and maintaining a Go REST API service.
+
